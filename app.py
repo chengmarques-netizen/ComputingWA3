@@ -43,7 +43,7 @@ def remove_item(item):
     if item in st.session_state.cart:
         st.session_state.cart[item] -= 1
 
-        if st.session_state.cart[item] == 0:
+        if st.session_state.cart[item] <= 0:
             del st.session_state.cart[item]
 
 
@@ -88,7 +88,7 @@ def check_card(card):
     if len(card) != 16:
         return False
 
-    if not card.isdigit():
+    if card.isdigit() == False:
         return False
 
     return True
@@ -104,21 +104,25 @@ def create_account(email, password):
 
 # UDF 10
 def login(email, password):
-    if st.session_state.account is not None:
-        if (email == st.session_state.account["email"] and
-                password == st.session_state.account["password"]):
+
+    if st.session_state.account is None:
+        return False
+
+    if email == st.session_state.account["email"]:
+        if password == st.session_state.account["password"]:
             return True
 
     return False
 
 
-# HEADER
+# TITLE
 st.title("🍛 Kailash Parbat")
 st.write("Chaats • Sweets • Dining")
+
 st.divider()
 
 
-# LOGIN
+# LOGIN PAGE
 if st.session_state.page == "login":
 
     st.header("Login")
@@ -155,15 +159,16 @@ elif st.session_state.page == "create":
     if st.button("Create Account"):
 
         # VALIDATION 1
-        if not check_email(email):
+        if check_email(email) == False:
             st.error("Email cannot be empty.")
 
         # VALIDATION 2
-        elif not check_password(password):
+        elif check_password(password) == False:
             st.error("Password must be at least 6 characters.")
 
         else:
             create_account(email, password)
+
             st.success("Account created!")
 
             st.session_state.page = "login"
@@ -179,9 +184,9 @@ elif st.session_state.page == "menu":
 
     st.header("🍽️ Menu")
 
-    items = sum(st.session_state.cart.values())
+    item_count = sum(st.session_state.cart.values())
 
-    if st.button("🛒 Cart (" + str(items) + " items)"):
+    if st.button("Cart (" + str(item_count) + " items)"):
         st.session_state.page = "cart"
         st.rerun()
 
@@ -189,23 +194,19 @@ elif st.session_state.page == "menu":
 
     for item in menu:
 
-        col1, col2 = st.columns([4, 1])
+        st.write("**" + item + "**")
+        st.write("$" + format(menu[item], ".2f"))
 
-        with col1:
-            st.write("**" + item + "**")
-            st.write("$" + format(menu[item], ".2f"))
+        if st.button("Add", key=item):
+            add_item(item)
+            st.rerun()
 
-        with col2:
-            if st.button("Add", key=item):
-                add_item(item)
-                st.rerun()
-
-    st.divider()
+        st.divider()
 
     if st.button("Logout"):
         st.session_state.logged_in = False
-        st.session_state.page = "login"
         st.session_state.cart = {}
+        st.session_state.page = "login"
         st.rerun()
 
 
@@ -225,20 +226,23 @@ elif st.session_state.page == "cart":
             quantity = st.session_state.cart[item]
 
             st.write(
-                item + " - $" +
-                format(menu[item], ".2f") +
-                " x " +
-                str(quantity)
+                item + " x " +
+                str(quantity) +
+                " = $" +
+                format(menu[item] * quantity, ".2f")
             )
 
             if st.button("Remove", key="remove_" + item):
                 remove_item(item)
                 st.rerun()
 
+        st.divider()
+
         subtotal = calculate_subtotal()
 
         st.subheader(
-            "Subtotal: $" + format(subtotal, ".2f")
+            "Subtotal: $" +
+            format(subtotal, ".2f")
         )
 
         if st.button("Checkout"):
@@ -260,11 +264,9 @@ elif st.session_state.page == "checkout":
     total = calculate_total(subtotal, gst)
 
     st.write("Subtotal: $" + format(subtotal, ".2f"))
-    st.write("GST (9%): $" + format(gst, ".2f"))
+    st.write("GST: $" + format(gst, ".2f"))
 
-    st.subheader(
-        "Total: $" + format(total, ".2f")
-    )
+    st.subheader("Total: $" + format(total, ".2f"))
 
     name = st.text_input("Name")
     card = st.text_input("Card Number")
@@ -272,7 +274,7 @@ elif st.session_state.page == "checkout":
     if st.button("Pay"):
 
         # VALIDATION 3
-        if not check_card(card):
+        if check_card(card) == False:
             st.error("Card number must contain 16 digits.")
 
         else:
@@ -290,6 +292,11 @@ elif st.session_state.page == "success":
 
     st.header("🎉 Order Successful!")
 
+    st.success("Your order has been placed!")
+
+    if st.button("Order Again"):
+        st.session_state.page = "menu"
+        st.rerun()
     st.success("Your order has been placed!")
 
     if st.button("Order Again"):
